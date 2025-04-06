@@ -3497,7 +3497,7 @@ function Library:CreateWindow(...)
     local ModalElement = Library:Create('TextButton', {
         BackgroundTransparency = 1;
         Size = UDim2.new(0, 0, 0, 0);
-        Visible = true;
+        Visible = false;
         Text = '';
         Modal = false;
         Parent = ScreenGui;
@@ -3513,13 +3513,13 @@ function Library:CreateWindow(...)
         end;
 
         local FadeTime = Config.MenuFadeTime;
-        Fading = true;
+        Fading = false;
         Toggled = (not Toggled);
         ModalElement.Modal = Toggled;
 
         if Toggled then
             -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
-            Outer.Visible = true;
+            Outer.Visible = false;
 
             task.spawn(function()
                 -- TODO: add cursor fade?
