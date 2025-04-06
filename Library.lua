@@ -3502,67 +3502,116 @@ function Library:CreateWindow(...)
         Modal = false;
         Parent = ScreenGui;
     });   
- 
+ local TransparencyCache = {};
+local Toggled = false;
+local Fading = false;
 
+function Library:Toggle()
+    if Fading then
+        return;
+    end;
 
+    local FadeTime = Config.MenuFadeTime;
+    Fading = true;
+    Toggled = (not Toggled);
+    ModalElement.Modal = Toggled;
 
-        for _, Desc in next, Outer:GetDescendants() do
-            local Properties = {};
+    if Toggled then
+        -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
+        Outer.Visible = true;
 
-            if Desc:IsA('ImageLabel') then
-                table.insert(Properties, 'ImageTransparency');
-                table.insert(Properties, 'BackgroundTransparency');
-            elseif Desc:IsA('TextLabel') or Desc:IsA('TextBox') then
-                table.insert(Properties, 'TextTransparency');
-            elseif Desc:IsA('Frame') or Desc:IsA('ScrollingFrame') then
-                table.insert(Properties, 'BackgroundTransparency');
-            elseif Desc:IsA('UIStroke') then
-                table.insert(Properties, 'Transparency');
+        task.spawn(function()
+            -- TODO: add cursor fade?
+            local State = InputService.MouseIconEnabled;
+
+            -- Removed cursor triangle creation and drawing
+            -- local Cursor = Drawing.new('Triangle');
+            -- Cursor.Thickness = 1;
+            -- Cursor.Filled = true;
+            -- Cursor.Visible = true;
+
+            -- local CursorOutline = Drawing.new('Triangle');
+            -- CursorOutline.Thickness = 1;
+            -- CursorOutline.Filled = false;
+            -- CursorOutline.Color = Color3.new(0, 0, 0);
+            -- CursorOutline.Visible = true;
+
+            while Toggled and ScreenGui.Parent do
+                InputService.MouseIconEnabled = false;  -- Hide system cursor
+
+                local mPos = InputService:GetMouseLocation();
+
+                -- No custom cursor drawing here
+                -- You can also add logic here if needed (like adjusting the system cursor position)
+
+                RenderStepped:Wait();
             end;
 
-            local Cache = TransparencyCache[Desc];
+            -- Show the original system cursor again when done
+            InputService.MouseIconEnabled = State;
 
-            if (not Cache) then
-                Cache = {};
-                TransparencyCache[Desc] = Cache;
-            end;
+            -- Remove cursor drawing if you had any
+            -- Cursor:Remove();
+            -- CursorOutline:Remove();
+        end);
+    end;
 
-            for _, Prop in next, Properties do
-                if not Cache[Prop] then
-                    Cache[Prop] = Desc[Prop];
-                end;
+    for _, Desc in next, Outer:GetDescendants() do
+        local Properties = {};
 
-                if Cache[Prop] == 1 then
-                    continue;
-                end;
-
-                TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), { [Prop] = Toggled and Cache[Prop] or 1 }):Play();
-            end;
+        if Desc:IsA('ImageLabel') then
+            table.insert(Properties, 'ImageTransparency');
+            table.insert(Properties, 'BackgroundTransparency');
+        elseif Desc:IsA('TextLabel') or Desc:IsA('TextBox') then
+            table.insert(Properties, 'TextTransparency');
+        elseif Desc:IsA('Frame') or Desc:IsA('ScrollingFrame') then
+            table.insert(Properties, 'BackgroundTransparency');
+        elseif Desc:IsA('UIStroke') then
+            table.insert(Properties, 'Transparency');
         end;
 
-        task.wait(FadeTime);
+        local Cache = TransparencyCache[Desc];
 
-        Outer.Visible = Toggled;
+        if (not Cache) then
+            Cache = {};
+            TransparencyCache[Desc] = Cache;
+        end;
 
-        Fading = false;
-    end
+        for _, Prop in next, Properties do
+            if not Cache[Prop] then
+                Cache[Prop] = Desc[Prop];
+            end;
 
-    Library:GiveSignal(InputService.InputBegan:Connect(function(Input, Processed)
-        if type(Library.ToggleKeybind) == 'table' and Library.ToggleKeybind.Type == 'KeyPicker' then
-            if Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode.Name == Library.ToggleKeybind.Value then
-                task.spawn(Library.Toggle)
-            end
-        elseif Input.KeyCode == Enum.KeyCode.RightControl or (Input.KeyCode == Enum.KeyCode.RightShift and (not Processed)) then
+            if Cache[Prop] == 1 then
+                continue;
+            end;
+
+            TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), { [Prop] = Toggled and Cache[Prop] or 1 }):Play();
+        end;
+    end;
+
+    task.wait(FadeTime);
+
+    Outer.Visible = Toggled;
+
+    Fading = false;
+end
+
+Library:GiveSignal(InputService.InputBegan:Connect(function(Input, Processed)
+    if type(Library.ToggleKeybind) == 'table' and Library.ToggleKeybind.Type == 'KeyPicker' then
+        if Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode.Name == Library.ToggleKeybind.Value then
             task.spawn(Library.Toggle)
         end
-    end))
+    elseif Input.KeyCode == Enum.KeyCode.RightControl or (Input.KeyCode == Enum.KeyCode.RightShift and (not Processed)) then
+        task.spawn(Library.Toggle)
+    end
+end))
 
-    if Config.AutoShow then task.spawn(Library.Toggle) end
+if Config.AutoShow then task.spawn(Library.Toggle) end
 
-    Window.Holder = Outer;
+Window.Holder = Outer;
 
-    return Window;
-end;
+return Library;
 
 local function OnPlayerChange()
     local PlayerList = GetPlayersString();
@@ -3579,3 +3628,4 @@ Players.PlayerRemoving:Connect(OnPlayerChange);
 
 getgenv().Library = Library
 return Library
+
