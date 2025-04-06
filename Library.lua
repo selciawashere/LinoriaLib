@@ -3506,6 +3506,9 @@ function Library:CreateWindow(...)
     local TransparencyCache = {};
     local Toggled = true;
     local Fading = false;
+    local TransparencyCache = {};
+    local Toggled = false;
+    local Fading = false;
 
     function Library:Toggle()
         if Fading then
@@ -3560,6 +3563,7 @@ function Library:CreateWindow(...)
                 CursorOutline:Remove();
             end);
         end;
+
 
 
         for _, Desc in next, Outer:GetDescendants() do
