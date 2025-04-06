@@ -3502,64 +3502,42 @@ function Library:CreateWindow(...)
         Modal = false;
         Parent = ScreenGui;
     });
+local TransparencyCache = {};
+local Toggled = false;
+local Fading = false;
 
-    local TransparencyCache = {};
-    local Toggled = false;
-    local Fading = false;
+function Library:Toggle()
+    if Fading then
+        return;
+    end;
 
-    function Library:Toggle()
-        if Fading then
-            return;
-        end;
+    local FadeTime = Config.MenuFadeTime;
+    Fading = false;
+    Toggled = (not Toggled);
+    ModalElement.Modal = Toggled;
 
-        local FadeTime = Config.MenuFadeTime;
-        Fading = false;
-        Toggled = (not Toggled);
-        ModalElement.Modal = Toggled;
+    if Toggled then
+        -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
+        Outer.Visible = true;
 
-        if Toggled then
-            -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
-            Outer.Visible = true;
+        task.spawn(function()
+            -- Keep the default Roblox cursor enabled
+            local State = InputService.MouseIconEnabled;
 
-            task.spawn(function()
-                -- TODO: add cursor fade?
-                local State = InputService.MouseIconEnabled;
+            -- Make sure the default cursor is visible
+            InputService.MouseIconEnabled = true;
 
-                local Cursor = Drawing.new('Triangle');
-                Cursor.Thickness = 1;
-                Cursor.Filled = false;
-                Cursor.Visible = true;
+            while Toggled and ScreenGui.Parent do
+                -- Just wait for the next frame, no need to manipulate the cursor
+                RenderStepped:Wait();
+            end;
 
-                local CursorOutline = Drawing.new('Triangle');
-                CursorOutline.Thickness = 1;
-                CursorOutline.Filled = false;
-                CursorOutline.Color = Color3.new(0, 0, 0);
-                CursorOutline.Visible = false;
+            -- Restore the previous cursor state if it was changed
+            InputService.MouseIconEnabled = State;
+        end);
+    end;
+end;
 
-                while Toggled and ScreenGui.Parent do
-                    InputService.MouseIconEnabled = false;
-
-                    local mPos = InputService:GetMouseLocation();
-
-                    Cursor.Color = Library.AccentColor;
-
-                    Cursor.PointA = Vector2.new(mPos.X, mPos.Y);
-                    Cursor.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
-                    Cursor.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
-
-                    CursorOutline.PointA = Cursor.PointA;
-                    CursorOutline.PointB = Cursor.PointB;
-                    CursorOutline.PointC = Cursor.PointC;
-
-                    RenderStepped:Wait();
-                end;
-
-                InputService.MouseIconEnabled = State;
-
-                Cursor:Remove();
-                CursorOutline:Remove();
-            end);
-        end;
 
         for _, Desc in next, Outer:GetDescendants() do
             local Properties = {};
